@@ -2,14 +2,66 @@ if(!file.exists('Coursera-SwiftKey.zip')){
     download.file('https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip', 'Coursera-SwiftKey.zip')}
 unzip('Coursera-SwiftKey.zip', overwrite = FALSE)
 
-list_of_packages <- c("tm", "readtext", "filehash", "openNLP")
+list_of_packages <- c("tm", "filehash", "openNLP", "readr", "SnowballC", "R.utils")
 new_packages <- list_of_packages[!(list_of_packages %in% installed.packages()[,"Package"])]
 if(length(new_packages)) install.packages(new_packages)
 
 library(tm)
 library(filehash)
 library(openNLP)
-library(readtext)
+library(readr)
+library(SnowballC)
+library(stringr)
+library(R.utils)
+
+## read lines into vectors, create Vector based Source, operate in smaller pieces of the database
+n_lines <- countLines(paste(getwd(), '/final/en_US/en_US.blogs.txt', sep = ""))
+
+countLines(paste(getwd(), '/final/en_US/en_US.twitter.txt', sep = ""))
+
+lines_per_text <- 10000
+
+sample_text <- readLines(paste(getwd(), '/final/en_US/en_US.blogs.txt', sep = ""), n = lines_per_text, encoding = 'UTF-8')
+
+# ## too slow...
+# n_texts <- round((n_lines + lines_per_text)/lines_per_text, 0)
+# 
+# text_list <- vector('list')
+# 
+# for (i in 1:lines_per_text) {
+#     text_list[[i]] <- readr::read_lines(paste(getwd(), '/final/en_US/en_US.blogs.txt', sep = ""), skip = (i * lines_per_text) - lines_per_text, n_max = lines_per_text)
+# }
+# ## too slow...
+
+## create sample Source
+texts <- VectorSource(sample_text)
+
+## create text collection for all elements in the Source (in memory load - check file size first!)
+corpus <- SimpleCorpus(texts, control = list(language = 'en_US'))
+
+## manipulations - learn which ones to use!
+blogs_clean <- tm_map(corpus, removePunctuation, preserve_intra_word_contractions = FALSE, preserve_intra_word_dashes = FALSE, ucp = FALSE)
+
+blogs_clean <- tm_map(blogs_clean, removeNumbers)
+
+blogs_clean <- tm_map(blogs_clean, stemDocument)
+
+blogs_clean <- tm_map(blogs_clean, removeWords, stopwords())
+
+blogs_clean <- tm_map(blogs_clean, str_replace_all, pattern = ' - ', replacement = '')
+blogs_clean <- tm_map(blogs_clean, str_replace_all, pattern = ' \" ', replacement = '')
+blogs_clean <- tm_map(blogs_clean, str_replace_all, pattern = ' \' ', replacement = '')
+blogs_clean <- tm_map(blogs_clean, str_replace_all, pattern = '  ', replacement = ' ')
+blogs_clean <- tm_map(blogs_clean, str_replace_all, pattern = '  ', replacement = ' ')
+blogs_clean <- tm_map(blogs_clean, str_replace_all, pattern = '  ', replacement = ' ')
+blogs_clean <- tm_map(blogs_clean, str_replace_all, pattern = '  ', replacement = ' ')
+
+blogs_clean[lapply(blogs_clean$content,length)>0]
+
+## create term-document matrix for the 'blogs' file
+term_doc_matrix <- TermDocumentMatrix(blogs_clean, control = list(tokenize = Maxent_Word_Token_Annotator))
+
+inspect(term_doc_matrix)
 
 ## create Source with all files on directory (only .txt files on this one)
 texts <- DirSource(directory = paste(getwd(), '/final/en_US', sep = ""),
@@ -31,7 +83,11 @@ texts <- DirSource(directory = paste(getwd(), '/final/en_US', sep = ""),
 corpus <- SimpleCorpus(texts, control = list(language = 'en_US'))
 
 ## manipulations - learn which ones to use!
+blogs_clean <- removeNumbers(corpus[[1]])
 
+
+blogs_clean <- tolower(blogs_clean)
+blogs_clean <- removeWords(blogs_clean, stopwords())
 
 ## create term-document matrix for the 'blogs' file
 term_doc_matrix <- TermDocumentMatrix(corpus[[3]], control = list(tokenize = Maxent_Sent_Token_Annotator))
