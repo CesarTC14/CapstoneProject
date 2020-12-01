@@ -19,9 +19,7 @@ library(tidytext)
 ## read lines into vectors, create Vector based Source, operate in smaller pieces of the database
 n_lines <- countLines(paste(getwd(), '/final/en_US/en_US.blogs.txt', sep = ""))
 
-countLines(paste(getwd(), '/final/en_US/en_US.twitter.txt', sep = ""))
-
-lines_per_text <- 10000
+lines_per_text <- n_lines
 
 sample_text <- readLines(paste(getwd(), '/final/en_US/en_US.blogs.txt', sep = ""), n = lines_per_text, encoding = 'UTF-8')
 
